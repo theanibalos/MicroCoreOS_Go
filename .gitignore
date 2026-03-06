@@ -1,0 +1,40 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+microcoreos-go
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Env vars
+.env
+
+# SQLite Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# AI Context File (auto-generated on boot)
+AI_CONTEXT.md
+
+# Auto-generated imports file
+imports_gen.go
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*~
