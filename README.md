@@ -1,33 +1,62 @@
 # MicroCoreOS — Go Edition
 
-Port del core de [MicroCoreOS](https://github.com/theanibalos/MicroCoreOS) a Go.
-Misma arquitectura "Atomic Microkernel", cero dependencias externas (solo stdlib).
+Port of the core of [MicroCoreOS](https://github.com/theanibalos/MicroCoreOS) to Go.
+Same "Atomic Microkernel" architecture, zero external dependencies (stdlib only).
 
-## Requisitos
+## Requirements
 
-- **Go 1.22+** ([instalar](https://go.dev/dl/))
+- **Go 1.22+** ([install](https://go.dev/dl/))
 
-## Ejecutar
+## Run
+
+To auto-discover tools/plugins and run:
 
 ```bash
+go generate
 go run .
 ```
 
-Output esperado:
+Expected output:
 
 ```
 --- [Kernel] Starting System ---
-[HttpServer] Configuring on port 5000...
-[Container] Tool registered: http
-[Kernel] Tool ready: http
-[Kernel] Plugin ready: PingPlugin
---- [Kernel] System Ready ---
-[HttpServer] Server active → http://localhost:5000
-
+[DEBUG] Tool registered  name=http
+[INFO] Tool ready  name=http
+[DEBUG] Tool registered  name=logger
+[INFO] Tool ready  name=logger
+[AuthTool] Initializing Security Infrastructure...
+[AuthTool] Ready (algorithm=HS256, expiry=60min).
+[ContextTool] Ready — will generate AI_CONTEXT.md after boot.
+[DEBUG] Tool registered  name=config
+[INFO] Tool ready  name=config
+[DEBUG] Tool registered  name=auth
+[INFO] Tool ready  name=auth
+[EventBus] Online.
+[DEBUG] Tool registered  name=context_manager
+[INFO] Tool ready  name=context_manager
+[DEBUG] Tool registered  name=event_bus
+[INFO] Tool ready  name=event_bus
+[SqliteTool] Opening database.db...
+[SqliteTool] Ready (WAL mode, FK enabled).
+[DEBUG] Tool registered  name=db
+[INFO] Tool ready  name=db
+time=2026-03-07T07:08:42.463Z level=INFO msg="LoggerTool promoted to system logger"
+time=2026-03-07T07:08:42.463Z level=INFO msg="Plugin ready" name=health
+time=2026-03-07T07:08:42.463Z level=INFO msg="Plugin ready" name=PingPlugin
+time=2026-03-07T07:08:42.463Z level=INFO msg="Plugin ready" name=CreateUserPlugin
+time=2026-03-07T07:08:42.463Z level=INFO msg="Plugin ready" name=LoginPlugin
+time=2026-03-07T07:08:42.463Z level=INFO msg="Plugin ready" name=ChatPlugin
+time=2026-03-07T07:08:42.464Z level=INFO msg="Plugin ready" name=LogoutPlugin
+time=2026-03-07T07:08:42.464Z level=INFO msg="Plugin ready" name=DicePlugin
+time=2026-03-07T07:08:42.464Z level=INFO msg="Plugin ready" name=GetMePlugin
+[ContextTool] ✅ AI_CONTEXT.md written.
+[SqliteTool:db] Checking for pending migrations in "domains"...
+time=2026-03-07T07:08:42.464Z level=INFO msg="Listening on http://localhost:5000" port=5000
+time=2026-03-07T07:08:42.464Z level=INFO msg="--- [Kernel] System Ready ---"
 🚀 [MicroCoreOS] System Online. (Ctrl+C to exit)
 ```
 
-## Probar
+## Test
 
 ```bash
 # Health (built-in)
@@ -37,17 +66,17 @@ curl http://localhost:5000/health
 curl http://localhost:5000/ping
 ```
 
-## Configuración
+## Configuration
 
-| Variable    | Default | Descripción         |
-| ----------- | ------- | ------------------- |
-| `HTTP_PORT` | `5000`  | Puerto del servidor |
+| Variable    | Default | Description |
+| ----------- | ------- | ----------- |
+| `HTTP_PORT` | `5000`  | Server port |
 
 ```bash
 HTTP_PORT=8080 go run .
 ```
 
-## Estructura
+## Structure
 
 ```
 microcoreos-go/
@@ -66,7 +95,7 @@ microcoreos-go/
         └── ping_plugin.go          # Sample plugin
 ```
 
-## Cómo crear un Tool nuevo
+## How to create a new Tool
 
 ```go
 // tools/mytool/mytool.go
@@ -79,7 +108,7 @@ func init() {
 }
 
 type MyTool struct {
-    core.BaseToolDefaults  // no-op defaults para OnBootComplete, Shutdown, etc.
+    core.BaseToolDefaults  // no-op defaults for OnBootComplete, Shutdown, etc.
 }
 
 func (t *MyTool) Name() string  { return "mytool" }
@@ -87,13 +116,13 @@ func (t *MyTool) Setup() error  { /* init resources */ return nil }
 func (t *MyTool) GetInterfaceDescription() string { return "..." }
 ```
 
-Luego en `main.go` agregar el import:
+Then, to register it automatically in the system (`imports_gen.go`), run in your terminal:
 
-```go
-_ "microcoreos-go/tools/mytool"
+```bash
+go generate
 ```
 
-## Cómo crear un Plugin nuevo
+## How to create a new Plugin
 
 ```go
 // domains/users/create_user_plugin.go
@@ -123,32 +152,37 @@ func (p *CreateUserPlugin) Inject(c *core.Container) error {
 }
 
 func (p *CreateUserPlugin) OnBoot() error {
-    p.http.AddEndpoint("/users", "POST", p.Execute)
+    p.http.AddEndpoint("/users", "POST", p.Execute, nil)
     return nil
 }
 
-func (p *CreateUserPlugin) Execute(data map[string]any, ctx *httptool.HttpContext) map[string]any {
-    name, _ := data["name"].(string)
-    return map[string]any{"success": true, "data": map[string]any{"name": name}}
+func (p *CreateUserPlugin) Execute(ctx *httptool.HttpContext) any {
+    // Read JSON body (example)
+    // var data map[string]any
+    // json.NewDecoder(ctx.Request.Body).Decode(&data)
+
+    // name, _ := data["name"].(string)
+    return map[string]any{"success": true, "data": map[string]any{"name": "test"}}
 }
 ```
 
-Luego en `main.go` agregar el import:
-
-```go
-_ "microcoreos-go/domains/users"
-```
-
-## Reglas (mismas que Python)
-
-1. **Nunca modificar el core** — el kernel auto-descubre via `init()`
-2. **1 archivo = 1 feature** — plugins auto-contenidos
-3. **Sin imports entre dominios** — usar event bus para comunicación
-4. **Response contract**: `{"success": bool, "data": ..., "error": ...}`
-
-## Build (binario)
+Just like with the tools, register it automatically by running:
 
 ```bash
+go generate
+```
+
+## Rules (Same as Python)
+
+1. **Never modify the core** — the kernel auto-discovers via `init()`
+2. **1 file = 1 feature** — self-contained plugins
+3. **No imports between domains** — use event bus for communication
+4. **Response contract**: `{"success": bool, "data": ..., "error": ...}`
+
+## Build (binary)
+
+```bash
+go generate
 go build -o microcoreos .
 ./microcoreos
 ```

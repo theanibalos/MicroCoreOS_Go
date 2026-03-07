@@ -1,4 +1,0 @@
-ok  	microcoreos-go/tools/configtool	(cached)	coverage: 85.7% of statements
-ok  	microcoreos-go/tools/loggertool	(cached)	coverage: 79.2% of statements
-coverage: 64.1% of statements
-ok  	microcoreos-go/tools/httptool	(cached)	coverage: 47.2% of statements
