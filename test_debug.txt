@@ -1,9 +1,0 @@
-=== RUN   TestCORS
-=== RUN   TestCORS/OPTIONS_returns_204
-=== RUN   TestCORS/GET_returns_CORS_headers
-[HttpServer] GET /cors → 200
---- PASS: TestCORS (0.00s)
-    --- PASS: TestCORS/OPTIONS_returns_204 (0.00s)
-    --- PASS: TestCORS/GET_returns_CORS_headers (0.00s)
-PASS
-ok  	microcoreos-go/tools/httptool	0.007s
