@@ -23,7 +23,7 @@ type LoggerTool interface {
 	Error(msg string, args ...any)
 	// With returns a child logger with the given key-value pairs pre-attached.
 	// Follows slog conventions: alternating key, value or slog.Attr.
-	With(args ...any) LoggerTool
+	With(args ...any) core.Logger
 }
 
 type loggerTool struct {
@@ -70,7 +70,7 @@ func (l *loggerTool) Info(msg string, args ...any)  { l.logger.Info(msg, args...
 func (l *loggerTool) Warn(msg string, args ...any)  { l.logger.Warn(msg, args...) }
 func (l *loggerTool) Error(msg string, args ...any) { l.logger.Error(msg, args...) }
 
-func (l *loggerTool) With(args ...any) LoggerTool {
+func (l *loggerTool) With(args ...any) core.Logger {
 	return &loggerTool{logger: l.logger.With(args...)}
 }
 

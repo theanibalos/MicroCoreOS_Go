@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 )
 
 // ─── Global self-registration ─────────────────────────────────────────────────
@@ -41,6 +42,7 @@ func RegisterPlugin(factory func() Plugin) {
 type Kernel struct {
 	Container *Container
 	plugins   map[string]Plugin
+	logger    Logger
 }
 
 // NewKernel creates a new Kernel with an empty Container.
@@ -48,7 +50,34 @@ func NewKernel() *Kernel {
 	return &Kernel{
 		Container: NewContainer(),
 		plugins:   make(map[string]Plugin),
+		logger:    &defaultLogger{}, // Start with a basic logger that prints to stdout
 	}
+}
+
+// defaultLogger is a fallback that uses fmt.Printf until a real LoggerTool is promoted.
+type defaultLogger struct{}
+
+func (l *defaultLogger) Debug(msg string, args ...any) { l.log("DEBUG", msg, args...) }
+func (l *defaultLogger) Info(msg string, args ...any)  { l.log("INFO", msg, args...) }
+func (l *defaultLogger) Warn(msg string, args ...any)  { l.log("WARN", msg, args...) }
+func (l *defaultLogger) Error(msg string, args ...any) { l.log("ERROR", msg, args...) }
+func (l *defaultLogger) With(args ...any) Logger       { return l }
+
+func (l *defaultLogger) log(level, msg string, args ...any) {
+	if len(args) == 0 {
+		fmt.Printf("[%s] %s\n", level, msg)
+		return
+	}
+	// Simple key=value formatting for the fallback logger
+	var pairs []string
+	for i := 0; i < len(args); i += 2 {
+		if i+1 < len(args) {
+			pairs = append(pairs, fmt.Sprintf("%v=%v", args[i], args[i+1]))
+		} else {
+			pairs = append(pairs, fmt.Sprintf("%v=?", args[i]))
+		}
+	}
+	fmt.Printf("[%s] %s  %s\n", level, msg, strings.Join(pairs, " "))
 }
 
 // checkStaleImports compares the number of core.Register* calls found in source
@@ -96,7 +125,7 @@ func countSourceRegistrations(pattern string) int {
 // Boot starts the system: tools first (parallel), then plugins (parallel),
 // then post-boot hooks for tools.
 func (k *Kernel) Boot() error {
-	fmt.Println("--- [Kernel] Starting System ---")
+	k.logger.Info("--- [Kernel] Starting System ---")
 	checkStaleImports(len(registeredToolFactories), len(registeredPluginFactories))
 
 	// ── Phase 1: Boot Tools (parallel) ──────────────────────────────────────
@@ -108,15 +137,26 @@ func (k *Kernel) Boot() error {
 			defer toolWg.Done()
 			if err := t.Setup(); err != nil {
 				k.Container.Registry.RegisterTool(t.Name(), "FAIL", err.Error())
-				fmt.Printf("[Kernel] 🚨 Tool '%s' failed: %v\n", t.Name(), err)
+				k.logger.Error("🚨 Tool failed", "name", t.Name(), "error", err)
 				return
 			}
 			k.Container.Register(t)
 			k.Container.Registry.RegisterTool(t.Name(), "OK")
-			fmt.Printf("[Kernel] Tool ready: %s\n", t.Name())
+			k.logger.Info("Tool ready", "name", t.Name())
 		}(tool)
 	}
 	toolWg.Wait()
+
+	// ── Phase 1.5: Promote Logger Tool ──────────────────────────────────────
+	// If a tool named "logger" was registered and implements core.Logger,
+	// the Kernel adopts it for all subsequent system logs.
+	if logTool, err := k.Container.Get("logger"); err == nil {
+		if l, ok := logTool.(Logger); ok {
+			k.logger = l
+			k.Container.SetLogger(l)
+			k.logger.Info("LoggerTool promoted to system logger")
+		}
+	}
 
 	// ── Phase 2: Boot Plugins (parallel Inject + parallel OnBoot) ───────────
 	// Tools are all registered. Plugins are independent of each other.
@@ -137,7 +177,7 @@ func (k *Kernel) Boot() error {
 		go func(p Plugin, n string) {
 			defer injectWg.Done()
 			if err := p.Inject(k.Container); err != nil {
-				fmt.Printf("[Kernel] 🚨 Plugin %s aborted: %v\n", n, err)
+				k.logger.Error("🚨 Plugin aborted", "name", n, "error", err)
 				k.Container.Registry.UpdatePluginStatus(n, "DEAD", err.Error())
 				return
 			}
@@ -160,11 +200,11 @@ func (k *Kernel) Boot() error {
 		go func(p Plugin, n string) {
 			defer bootWg.Done()
 			if err := p.OnBoot(); err != nil {
-				fmt.Printf("[Kernel] ⚠️  Failure in %s: %v\n", n, err)
+				k.logger.Warn("⚠️  Failure in plugin", "name", n, "error", err)
 				k.Container.Registry.UpdatePluginStatus(n, "DEAD", err.Error())
 				return
 			}
-			fmt.Printf("[Kernel] Plugin ready: %s\n", n)
+			k.logger.Info("Plugin ready", "name", n)
 			k.Container.Registry.UpdatePluginStatus(n, "READY")
 		}(rp.plugin, rp.name)
 	}
@@ -174,12 +214,12 @@ func (k *Kernel) Boot() error {
 	for _, toolName := range k.Container.ListTools() {
 		tool, _ := k.Container.Get(toolName)
 		if err := tool.OnBootComplete(k.Container); err != nil {
-			fmt.Printf("[Kernel] 🚨 Post-boot failure in '%s': %v\n", toolName, err)
+			k.logger.Error("🚨 Post-boot failure in tool", "name", toolName, "error", err)
 			k.Container.Registry.UpdateToolStatus(toolName, "DEGRADED", err.Error())
 		}
 	}
 
-	fmt.Println("--- [Kernel] System Ready ---")
+	k.logger.Info("--- [Kernel] System Ready ---")
 	return nil
 }
 
@@ -197,7 +237,14 @@ func (k *Kernel) WaitForShutdown() {
 //  2. Plugins (release business logic resources, cancel subscriptions)
 //  3. Remaining tools (DB connections, event bus, etc.)
 func (k *Kernel) Shutdown() {
-	fmt.Println("\n--- [Kernel] Shutting down ---")
+	k.logger.Info("--- [Kernel] Shutting down ---")
+
+	// Hard timeout for shutdown to prevent hanging in production
+	timer := time.AfterFunc(10*time.Second, func() {
+		k.logger.Error("🚨 Shutdown timed out! Forcing exit.")
+		os.Exit(1)
+	})
+	defer timer.Stop()
 
 	// Phase 1: priority tools — must drain before plugins release their resources.
 	for _, toolName := range k.Container.ListTools() {
@@ -207,16 +254,16 @@ func (k *Kernel) Shutdown() {
 			continue
 		}
 		if err := fs.ShutdownFirst(); err != nil {
-			fmt.Printf("[Kernel] Error draining tool '%s': %v\n", toolName, err)
+			k.logger.Error("Error draining tool", "name", toolName, "error", err)
 		} else {
-			fmt.Printf("[Kernel] Tool '%s' drained.\n", toolName)
+			k.logger.Info("Tool drained", "name", toolName)
 		}
 	}
 
 	// Phase 2: plugins.
 	for name, plugin := range k.plugins {
 		if err := plugin.Shutdown(); err != nil {
-			fmt.Printf("[Kernel] Error closing plugin '%s': %v\n", name, err)
+			k.logger.Error("Error closing plugin", "name", name, "error", err)
 		}
 	}
 
@@ -224,11 +271,11 @@ func (k *Kernel) Shutdown() {
 	for _, toolName := range k.Container.ListTools() {
 		tool, _ := k.Container.Get(toolName)
 		if err := tool.Shutdown(); err != nil {
-			fmt.Printf("[Kernel] Error closing tool '%s': %v\n", toolName, err)
+			k.logger.Error("Error closing tool", "name", toolName, "error", err)
 		} else {
-			fmt.Printf("[Kernel] Tool '%s' closed.\n", toolName)
+			k.logger.Info("Tool closed", "name", toolName)
 		}
 	}
 
-	fmt.Println("[MicroCoreOS] Shutdown complete. See you soon!")
+	k.logger.Info("[MicroCoreOS] Shutdown complete. See you soon!")
 }

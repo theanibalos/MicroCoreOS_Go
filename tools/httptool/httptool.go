@@ -187,12 +187,13 @@ type pendingWsEndpoint struct {
 // HttpServerTool implements the HTTP server using Go's stdlib net/http.
 type HttpServerTool struct {
 	core.BaseToolDefaults
-	mux         *http.ServeMux
-	server      *http.Server
-	port        string
-	pending     []pendingEndpoint
-	pendingWs   []pendingWsEndpoint
-	middlewares []MiddlewareFunc
+	mux          *http.ServeMux
+	server       *http.Server
+	port         string
+	pending      []pendingEndpoint
+	pendingWs    []pendingWsEndpoint
+	middlewares  []MiddlewareFunc
+	logger       core.Logger
 	shutdownOnce sync.Once
 }
 
@@ -215,13 +216,45 @@ func NewHttpServerTool() *HttpServerTool {
 func (h *HttpServerTool) Name() string { return "http" }
 
 func (h *HttpServerTool) Setup() error {
-	fmt.Printf("[HttpServer] Configuring on port %s...\n", h.port)
+	return nil
+}
 
-	// Built-in health endpoint
-	h.mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"status": "ok", "engine": "go-stdlib"})
-	})
+func (h *HttpServerTool) OnBootComplete(c *core.Container) error {
+	if log, err := core.GetTool[core.Logger](c, "logger"); err == nil {
+		h.logger = log
+	}
+
+	h.registerAllEndpoints()
+	h.registerAllWebsockets()
+
+	ln, err := net.Listen("tcp", ":"+h.port)
+	if err != nil {
+		return fmt.Errorf("httptool: failed to listen on :%s: %w", h.port, err)
+	}
+
+	var handler http.Handler = h.mux
+	for i := len(h.middlewares) - 1; i >= 0; i-- {
+		handler = h.middlewares[i](handler)
+	}
+	h.server = &http.Server{Handler: h.corsMiddleware(handler)}
+
+	msg := "Listening on http://localhost:" + h.port
+	if h.logger != nil {
+		h.logger.Info(msg, "port", h.port)
+	} else {
+		fmt.Printf("[HttpServer] %s\n", msg)
+	}
+
+	go func() {
+		if err := h.server.Serve(ln); err != nil && err != http.ErrServerClosed {
+			if h.logger != nil {
+				h.logger.Error("Server error", "error", err)
+			} else {
+				fmt.Printf("[HttpServer] 🚨 Server error: %v\n", err)
+			}
+		}
+	}()
+
 	return nil
 }
 
@@ -288,36 +321,7 @@ All methods are called in OnBoot(). The server starts after all plugins have boo
     When it returns the connection is closed automatically.`
 }
 
-// OnBootComplete registers all buffered endpoints and starts the server.
-func (h *HttpServerTool) OnBootComplete(c *core.Container) error {
-	h.registerAllEndpoints()
-	h.registerAllWebsockets()
-
-	ln, err := net.Listen("tcp", ":"+h.port)
-	if err != nil {
-		return fmt.Errorf("failed to listen on port %s: %w", h.port, err)
-	}
-
-	// Build middleware chain: CORS (outermost) → plugin middlewares → mux.
-	// Apply plugin middlewares in reverse so first-registered runs first.
-	var handler http.Handler = h.mux
-	for i := len(h.middlewares) - 1; i >= 0; i-- {
-		handler = h.middlewares[i](handler)
-	}
-	h.server = &http.Server{Handler: h.corsMiddleware(handler)}
-
-	go func() {
-		fmt.Printf("[HttpServer] Server active → http://localhost:%s\n", h.port)
-		if err := h.server.Serve(ln); err != nil && err != http.ErrServerClosed {
-			fmt.Printf("[HttpServer] Server error: %v\n", err)
-		}
-	}()
-	return nil
-}
-
-// ShutdownFirst implements core.FirstShutdown. The Kernel calls this before
-// shutting down plugins, ensuring all in-flight HTTP requests complete while
-// plugins still have their resources (DB, bus subscriptions) available.
+// ShutdownFirst implements core.FirstShutdown.
 func (h *HttpServerTool) ShutdownFirst() error {
 	var err error
 	h.shutdownOnce.Do(func() {

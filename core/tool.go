@@ -16,6 +16,17 @@ type Tool interface {
 	Shutdown() error
 }
 
+// Logger is the interface for structured logging within the core and plugins.
+// The Kernel uses this to provide observability of the system lifecycle.
+type Logger interface {
+	Debug(msg string, args ...any)
+	Info(msg string, args ...any)
+	Warn(msg string, args ...any)
+	Error(msg string, args ...any)
+	// With returns a child logger with pre-attached attributes.
+	With(args ...any) Logger
+}
+
 // FirstShutdown is an optional interface for Tools that must fully shut down
 // before plugins begin their shutdown sequence.
 //

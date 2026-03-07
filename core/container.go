@@ -30,6 +30,7 @@ type Container struct {
 	tools    map[string]Tool
 	Registry *Registry
 	mu       sync.RWMutex
+	logger   Logger
 }
 
 // NewContainer creates an empty Container with a fresh Registry.
@@ -37,7 +38,15 @@ func NewContainer() *Container {
 	return &Container{
 		tools:    make(map[string]Tool),
 		Registry: NewRegistry(),
+		logger:   &defaultLogger{},
 	}
+}
+
+// SetLogger updates the logger used by the container for internal events.
+func (c *Container) SetLogger(l Logger) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.logger = l
 }
 
 // Register adds a tool to the container, keyed by its Name().
@@ -45,7 +54,7 @@ func (c *Container) Register(tool Tool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.tools[tool.Name()] = tool
-	fmt.Printf("[Container] Tool registered: %s\n", tool.Name())
+	c.logger.Debug("Tool registered", "name", tool.Name())
 }
 
 // Get retrieves a tool by name. Returns an error if not found.

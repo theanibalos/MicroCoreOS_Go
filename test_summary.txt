@@ -1,0 +1,358 @@
+=== RUN   TestFullSystemIntegration
+[INFO] --- [Kernel] Starting System ---
+[DEBUG] Tool registered  name=http
+[INFO] Tool ready  name=http
+[SqliteTool] Opening database.db...
+[EventBus] Online.
+[DEBUG] Tool registered  name=event_bus
+[INFO] Tool ready  name=event_bus
+[DEBUG] Tool registered  name=config
+[INFO] Tool ready  name=config
+[ContextTool] Ready — will generate AI_CONTEXT.md after boot.
+[DEBUG] Tool registered  name=context_manager
+[INFO] Tool ready  name=context_manager
+[DEBUG] Tool registered  name=logger
+[INFO] Tool ready  name=logger
+[AuthTool] Initializing Security Infrastructure...
+[AuthTool] Ready (algorithm=HS256, expiry=60min).
+[DEBUG] Tool registered  name=auth
+[INFO] Tool ready  name=auth
+[SqliteTool] Ready (WAL mode, FK enabled).
+[DEBUG] Tool registered  name=db
+[INFO] Tool ready  name=db
+time=2026-03-06T14:00:13.652Z level=INFO msg="LoggerTool promoted to system logger"
+time=2026-03-06T14:00:13.652Z level=INFO msg="Plugin ready" name=DicePlugin
+time=2026-03-06T14:00:13.652Z level=INFO msg="Plugin ready" name=ChatPlugin
+time=2026-03-06T14:00:13.652Z level=INFO msg="Plugin ready" name=PingPlugin
+time=2026-03-06T14:00:13.652Z level=INFO msg="Plugin ready" name=LoginPlugin
+time=2026-03-06T14:00:13.652Z level=INFO msg="Plugin ready" name=health
+time=2026-03-06T14:00:13.652Z level=INFO msg="Plugin ready" name=LogoutPlugin
+time=2026-03-06T14:00:13.652Z level=INFO msg="Plugin ready" name=GetMePlugin
+time=2026-03-06T14:00:13.652Z level=INFO msg="Plugin ready" name=CreateUserPlugin
+[SqliteTool:db] Checking for pending migrations in "domains"...
+time=2026-03-06T14:00:13.653Z level=INFO msg="Listening on http://localhost:5001" port=5001
+[ContextTool] ✅ AI_CONTEXT.md written.
+time=2026-03-06T14:00:13.653Z level=INFO msg="--- [Kernel] System Ready ---"
+[HttpServer] GET /health → 200
+Integration test: System healthy, shutting down...
+time=2026-03-06T14:00:14.151Z level=INFO msg="--- [Kernel] Shutting down ---"
+time=2026-03-06T14:00:14.151Z level=INFO msg="Tool drained" name=http
+[SqliteTool] Connection closed.
+time=2026-03-06T14:00:14.152Z level=INFO msg="Tool closed" name=db
+time=2026-03-06T14:00:14.152Z level=INFO msg="Tool closed" name=http
+time=2026-03-06T14:00:14.152Z level=INFO msg="Tool closed" name=event_bus
+time=2026-03-06T14:00:14.152Z level=INFO msg="Tool closed" name=config
+time=2026-03-06T14:00:14.152Z level=INFO msg="Tool closed" name=context_manager
+time=2026-03-06T14:00:14.152Z level=INFO msg="Tool closed" name=logger
+time=2026-03-06T14:00:14.152Z level=INFO msg="Tool closed" name=auth
+time=2026-03-06T14:00:14.152Z level=INFO msg="[MicroCoreOS] Shutdown complete. See you soon!"
+--- PASS: TestFullSystemIntegration (0.50s)
+PASS
+ok  	microcoreos-go	0.512s
+?   	microcoreos-go/cmd/mcoreos	[no test files]
+=== RUN   TestContainer_RegisterAndGet
+=== PAUSE TestContainer_RegisterAndGet
+=== RUN   TestContainer_GetNotFound
+=== PAUSE TestContainer_GetNotFound
+=== RUN   TestContainer_HasTool
+=== PAUSE TestContainer_HasTool
+=== RUN   TestContainer_ListTools
+=== PAUSE TestContainer_ListTools
+=== RUN   TestContainer_MustGet_Panics
+=== PAUSE TestContainer_MustGet_Panics
+=== RUN   TestContainer_Register_Overwrites
+=== PAUSE TestContainer_Register_Overwrites
+=== RUN   TestGetTool_Success
+=== PAUSE TestGetTool_Success
+=== RUN   TestGetTool_TypeMismatch
+=== PAUSE TestGetTool_TypeMismatch
+=== RUN   TestGetTool_NotFound
+=== PAUSE TestGetTool_NotFound
+=== RUN   TestKernel_Boot_NoToolsNoPlugins
+[INFO] --- [Kernel] Starting System ---
+[INFO] --- [Kernel] System Ready ---
+--- PASS: TestKernel_Boot_NoToolsNoPlugins (0.00s)
+=== RUN   TestKernel_Boot_ToolSuccess
+[INFO] --- [Kernel] Starting System ---
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[Kernel] ⚠️  STALE IMPORTS DETECTED
+[Kernel] ⚠️  Source declares: 0 tools, 0 plugins
+[Kernel] ⚠️  Actually booted: 1 tools, 0 plugins
+[Kernel] ⚠️  → Run: bash gen-imports.sh && go build .
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[DEBUG] Tool registered  name=testtool
+[INFO] Tool ready  name=testtool
+[INFO] --- [Kernel] System Ready ---
+--- PASS: TestKernel_Boot_ToolSuccess (0.00s)
+=== RUN   TestKernel_Boot_ToolSetupFails
+[INFO] --- [Kernel] Starting System ---
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[Kernel] ⚠️  STALE IMPORTS DETECTED
+[Kernel] ⚠️  Source declares: 0 tools, 0 plugins
+[Kernel] ⚠️  Actually booted: 1 tools, 0 plugins
+[Kernel] ⚠️  → Run: bash gen-imports.sh && go build .
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[ERROR] 🚨 Tool failed  name=badtool error=setup failed
+[INFO] --- [Kernel] System Ready ---
+--- PASS: TestKernel_Boot_ToolSetupFails (0.00s)
+=== RUN   TestKernel_Boot_PluginInjectFails
+[INFO] --- [Kernel] Starting System ---
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[Kernel] ⚠️  STALE IMPORTS DETECTED
+[Kernel] ⚠️  Source declares: 0 tools, 0 plugins
+[Kernel] ⚠️  Actually booted: 0 tools, 1 plugins
+[Kernel] ⚠️  → Run: bash gen-imports.sh && go build .
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[ERROR] 🚨 Plugin aborted  name=badplugin error=inject failed
+[INFO] --- [Kernel] System Ready ---
+--- PASS: TestKernel_Boot_PluginInjectFails (0.00s)
+=== RUN   TestKernel_Boot_PluginOnBootFails
+[INFO] --- [Kernel] Starting System ---
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[Kernel] ⚠️  STALE IMPORTS DETECTED
+[Kernel] ⚠️  Source declares: 0 tools, 0 plugins
+[Kernel] ⚠️  Actually booted: 0 tools, 1 plugins
+[Kernel] ⚠️  → Run: bash gen-imports.sh && go build .
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[WARN] ⚠️  Failure in plugin  name=bootfailplugin error=boot failed
+[INFO] --- [Kernel] System Ready ---
+--- PASS: TestKernel_Boot_PluginOnBootFails (0.00s)
+=== RUN   TestKernel_Boot_PluginReady
+[INFO] --- [Kernel] Starting System ---
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[Kernel] ⚠️  STALE IMPORTS DETECTED
+[Kernel] ⚠️  Source declares: 0 tools, 0 plugins
+[Kernel] ⚠️  Actually booted: 0 tools, 1 plugins
+[Kernel] ⚠️  → Run: bash gen-imports.sh && go build .
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[INFO] Plugin ready  name=readyplugin
+[INFO] --- [Kernel] System Ready ---
+--- PASS: TestKernel_Boot_PluginReady (0.00s)
+=== RUN   TestKernel_Shutdown_NoError
+[INFO] --- [Kernel] Starting System ---
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[Kernel] ⚠️  STALE IMPORTS DETECTED
+[Kernel] ⚠️  Source declares: 0 tools, 0 plugins
+[Kernel] ⚠️  Actually booted: 1 tools, 1 plugins
+[Kernel] ⚠️  → Run: bash gen-imports.sh && go build .
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[DEBUG] Tool registered  name=shutdowntool
+[INFO] Tool ready  name=shutdowntool
+[INFO] Plugin ready  name=shutdownplugin
+[INFO] --- [Kernel] System Ready ---
+[INFO] --- [Kernel] Shutting down ---
+[INFO] Tool closed  name=shutdowntool
+[INFO] [MicroCoreOS] Shutdown complete. See you soon!
+--- PASS: TestKernel_Shutdown_NoError (0.00s)
+=== RUN   TestKernel_Shutdown_FirstShutdown
+[INFO] --- [Kernel] Starting System ---
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[Kernel] ⚠️  STALE IMPORTS DETECTED
+[Kernel] ⚠️  Source declares: 0 tools, 0 plugins
+[Kernel] ⚠️  Actually booted: 1 tools, 0 plugins
+[Kernel] ⚠️  → Run: bash gen-imports.sh && go build .
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[DEBUG] Tool registered  name=prioritytool
+[INFO] Tool ready  name=prioritytool
+[INFO] --- [Kernel] System Ready ---
+[INFO] --- [Kernel] Shutting down ---
+[INFO] Tool drained  name=prioritytool
+[INFO] Tool closed  name=prioritytool
+[INFO] [MicroCoreOS] Shutdown complete. See you soon!
+--- PASS: TestKernel_Shutdown_FirstShutdown (0.00s)
+=== RUN   TestKernel_Boot_MultipleToolsAndPlugins
+[INFO] --- [Kernel] Starting System ---
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[Kernel] ⚠️  STALE IMPORTS DETECTED
+[Kernel] ⚠️  Source declares: 0 tools, 0 plugins
+[Kernel] ⚠️  Actually booted: 2 tools, 2 plugins
+[Kernel] ⚠️  → Run: bash gen-imports.sh && go build .
+[Kernel] ⚠️  ─────────────────────────────────────────────────
+[DEBUG] Tool registered  name=toolB
+[INFO] Tool ready  name=toolB
+[DEBUG] Tool registered  name=toolA
+[INFO] Tool ready  name=toolA
+[INFO] Plugin ready  name=pluginA
+[INFO] Plugin ready  name=pluginB
+[INFO] --- [Kernel] System Ready ---
+--- PASS: TestKernel_Boot_MultipleToolsAndPlugins (0.00s)
+=== RUN   TestRegistry_RegisterTool
+=== PAUSE TestRegistry_RegisterTool
+=== RUN   TestRegistry_RegisterTool_WithMessage
+=== PAUSE TestRegistry_RegisterTool_WithMessage
+=== RUN   TestRegistry_UpdateToolStatus
+=== PAUSE TestRegistry_UpdateToolStatus
+=== RUN   TestRegistry_UpdateToolStatus_NoopOnMissing
+=== PAUSE TestRegistry_UpdateToolStatus_NoopOnMissing
+=== RUN   TestRegistry_RegisterPlugin
+=== PAUSE TestRegistry_RegisterPlugin
+=== RUN   TestRegistry_UpdatePluginStatus
+=== PAUSE TestRegistry_UpdatePluginStatus
+=== RUN   TestRegistry_UpdatePluginStatus_WithError
+=== PAUSE TestRegistry_UpdatePluginStatus_WithError
+=== RUN   TestRegistry_UpdatePluginStatus_ClearsError
+=== PAUSE TestRegistry_UpdatePluginStatus_ClearsError
+=== RUN   TestRegistry_GetSystemDump
+=== PAUSE TestRegistry_GetSystemDump
+=== RUN   TestRegistry_GetToolStatuses_ReturnsCopy
+=== PAUSE TestRegistry_GetToolStatuses_ReturnsCopy
+=== RUN   TestRegistry_ConcurrentAccess
+=== PAUSE TestRegistry_ConcurrentAccess
+=== CONT  TestContainer_RegisterAndGet
+[DEBUG] Tool registered  name=foo
+--- PASS: TestContainer_RegisterAndGet (0.00s)
+=== CONT  TestRegistry_ConcurrentAccess
+=== CONT  TestRegistry_GetToolStatuses_ReturnsCopy
+--- PASS: TestRegistry_GetToolStatuses_ReturnsCopy (0.00s)
+=== CONT  TestRegistry_GetSystemDump
+--- PASS: TestRegistry_GetSystemDump (0.00s)
+=== CONT  TestRegistry_UpdatePluginStatus_ClearsError
+--- PASS: TestRegistry_UpdatePluginStatus_ClearsError (0.00s)
+=== CONT  TestRegistry_UpdatePluginStatus_WithError
+--- PASS: TestRegistry_UpdatePluginStatus_WithError (0.00s)
+=== CONT  TestRegistry_UpdatePluginStatus
+=== CONT  TestRegistry_RegisterPlugin
+--- PASS: TestRegistry_UpdatePluginStatus (0.00s)
+--- PASS: TestRegistry_RegisterPlugin (0.00s)
+=== CONT  TestRegistry_UpdateToolStatus_NoopOnMissing
+--- PASS: TestRegistry_UpdateToolStatus_NoopOnMissing (0.00s)
+=== CONT  TestRegistry_UpdateToolStatus
+--- PASS: TestRegistry_UpdateToolStatus (0.00s)
+=== CONT  TestRegistry_RegisterTool_WithMessage
+--- PASS: TestRegistry_RegisterTool_WithMessage (0.00s)
+=== CONT  TestRegistry_RegisterTool
+--- PASS: TestRegistry_RegisterTool (0.00s)
+=== CONT  TestGetTool_NotFound
+=== CONT  TestGetTool_TypeMismatch
+--- PASS: TestGetTool_NotFound (0.00s)
+[DEBUG] Tool registered  name=plain
+--- PASS: TestGetTool_TypeMismatch (0.00s)
+=== CONT  TestGetTool_Success
+[DEBUG] Tool registered  name=foo
+=== CONT  TestContainer_HasTool
+=== CONT  TestContainer_MustGet_Panics
+=== CONT  TestContainer_GetNotFound
+[DEBUG] Tool registered  name=bar
+=== CONT  TestContainer_ListTools
+--- PASS: TestGetTool_Success (0.00s)
+--- PASS: TestContainer_HasTool (0.00s)
+--- PASS: TestContainer_GetNotFound (0.00s)
+[DEBUG] Tool registered  name=a
+[DEBUG] Tool registered  name=b
+--- PASS: TestContainer_MustGet_Panics (0.00s)
+--- PASS: TestContainer_ListTools (0.00s)
+--- PASS: TestRegistry_ConcurrentAccess (0.00s)
+=== CONT  TestContainer_Register_Overwrites
+[DEBUG] Tool registered  name=dup
+[DEBUG] Tool registered  name=dup
+--- PASS: TestContainer_Register_Overwrites (0.00s)
+PASS
+ok  	microcoreos-go/core	0.008s
+?   	microcoreos-go/domains/chat	[no test files]
+?   	microcoreos-go/domains/dice	[no test files]
+?   	microcoreos-go/domains/ping	[no test files]
+?   	microcoreos-go/domains/system/plugins	[no test files]
+?   	microcoreos-go/domains/users/models	[no test files]
+?   	microcoreos-go/domains/users/plugins	[no test files]
+=== RUN   TestPasswordHashing
+--- PASS: TestPasswordHashing (0.25s)
+=== RUN   TestJWTLifecycle
+[AuthTool] Initializing Security Infrastructure...
+[AuthTool] Ready (algorithm=HS256, expiry=60min).
+=== RUN   TestJWTLifecycle/Valid_token
+=== RUN   TestJWTLifecycle/Invalid_signature
+=== RUN   TestJWTLifecycle/Expiration
+--- PASS: TestJWTLifecycle (0.00s)
+    --- PASS: TestJWTLifecycle/Valid_token (0.00s)
+    --- PASS: TestJWTLifecycle/Invalid_signature (0.00s)
+    --- PASS: TestJWTLifecycle/Expiration (0.00s)
+=== RUN   TestAlgorithmMismatch
+[AuthTool] Initializing Security Infrastructure...
+[AuthTool] Ready (algorithm=HS256, expiry=60min).
+--- PASS: TestAlgorithmMismatch (0.00s)
+PASS
+ok  	microcoreos-go/tools/authtool	(cached)
+=== RUN   TestConfigTool
+=== RUN   TestConfigTool/Require_existing_keys
+=== RUN   TestConfigTool/Require_missing_keys_fails
+=== RUN   TestConfigTool/Get_with_default
+=== RUN   TestConfigTool/GetInt
+=== RUN   TestConfigTool/GetBool
+--- PASS: TestConfigTool (0.00s)
+    --- PASS: TestConfigTool/Require_existing_keys (0.00s)
+    --- PASS: TestConfigTool/Require_missing_keys_fails (0.00s)
+    --- PASS: TestConfigTool/Get_with_default (0.00s)
+    --- PASS: TestConfigTool/GetInt (0.00s)
+    --- PASS: TestConfigTool/GetBool (0.00s)
+PASS
+ok  	microcoreos-go/tools/configtool	0.006s
+=== RUN   TestContextTool
+[DEBUG] Tool registered  name=test_tool
+[ContextTool] ✅ TEST_CONTEXT.md written.
+--- PASS: TestContextTool (0.00s)
+PASS
+ok  	microcoreos-go/tools/contexttool	(cached)
+=== RUN   TestScanOne
+=== RUN   TestScanOne/Valid_row_mapping
+=== RUN   TestScanOne/Nil_row_returns_zero_value
+=== RUN   TestScanOne/Type_mismatch_error
+=== RUN   TestScanOne/Partial_row_mapping
+--- PASS: TestScanOne (0.00s)
+    --- PASS: TestScanOne/Valid_row_mapping (0.00s)
+    --- PASS: TestScanOne/Nil_row_returns_zero_value (0.00s)
+    --- PASS: TestScanOne/Type_mismatch_error (0.00s)
+    --- PASS: TestScanOne/Partial_row_mapping (0.00s)
+=== RUN   TestScan
+=== RUN   TestScan/Valid_slice_mapping
+=== RUN   TestScan/Empty_slice_returns_empty_slice
+=== RUN   TestScan/Error_propagation_from_ScanOne
+--- PASS: TestScan (0.00s)
+    --- PASS: TestScan/Valid_slice_mapping (0.00s)
+    --- PASS: TestScan/Empty_slice_returns_empty_slice (0.00s)
+    --- PASS: TestScan/Error_propagation_from_ScanOne (0.00s)
+PASS
+ok  	microcoreos-go/tools/dbtool	(cached)
+?   	microcoreos-go/tools/dbtool/drivers	[no test files]
+=== RUN   TestWildcardSubscriptions
+--- PASS: TestWildcardSubscriptions (0.00s)
+=== RUN   TestRequestReply
+=== RUN   TestRequestReply/Successful_request
+=== RUN   TestRequestReply/Request_timeout
+--- PASS: TestRequestReply (0.00s)
+    --- PASS: TestRequestReply/Successful_request (0.00s)
+    --- PASS: TestRequestReply/Request_timeout (0.00s)
+=== RUN   TestTraceIDPropagation
+--- PASS: TestTraceIDPropagation (0.00s)
+=== RUN   TestCancelSubscription
+--- PASS: TestCancelSubscription (0.10s)
+PASS
+ok  	microcoreos-go/tools/eventbus	(cached)
+=== RUN   TestMiddlewareChain
+[HttpServer] GET /test → 200
+--- PASS: TestMiddlewareChain (0.00s)
+=== RUN   TestAuthValidator
+=== RUN   TestAuthValidator/Unauthorized_request_(no_token)
+[HttpServer] GET /protected → 401 (auth failed)
+=== RUN   TestAuthValidator/Authorized_request_(valid_token)
+[HttpServer] GET /protected → 200
+--- PASS: TestAuthValidator (0.00s)
+    --- PASS: TestAuthValidator/Unauthorized_request_(no_token) (0.00s)
+    --- PASS: TestAuthValidator/Authorized_request_(valid_token) (0.00s)
+=== RUN   TestPathParams
+[HttpServer] GET /users/42 → 200
+--- PASS: TestPathParams (0.00s)
+=== RUN   TestHttpContext
+[HttpServer] GET /ctx → 201
+--- PASS: TestHttpContext (0.00s)
+PASS
+ok  	microcoreos-go/tools/httptool	(cached)
+=== RUN   TestLoggerTool
+time=2026-03-06T14:00:13.823Z level=DEBUG msg="test debug"
+time=2026-03-06T14:00:13.823Z level=INFO msg="test info" key=value
+time=2026-03-06T14:00:13.823Z level=INFO msg="child log" context=request123
+--- PASS: TestLoggerTool (0.00s)
+=== RUN   TestLoggerToolJSON
+{"time":"2026-03-06T14:00:13.823925456Z","level":"INFO","msg":"json log test"}
+--- PASS: TestLoggerToolJSON (0.00s)
+PASS
+ok  	microcoreos-go/tools/loggertool	0.005s
