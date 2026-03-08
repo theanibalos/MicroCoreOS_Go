@@ -29,8 +29,8 @@ func (p *HealthPlugin) Inject(c *core.Container) error {
 }
 
 func (p *HealthPlugin) OnBoot() error {
-	p.http.AddEndpoint("/health", "GET", func(ctx *httptool.HttpContext) any {
-		return p.c.Registry.GetSystemDump()
+	p.http.AddEndpoint("/health", "GET", func(ctx *httptool.HttpContext) (any, error) {
+		return p.c.Registry.GetSystemDump(), nil
 	}, nil)
 
 	return nil

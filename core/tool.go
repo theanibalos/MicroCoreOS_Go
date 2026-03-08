@@ -8,12 +8,17 @@ type Tool interface {
 	Name() string
 	// Setup initializes the tool (called in parallel with other tools).
 	Setup() error
-	// GetInterfaceDescription returns a human-readable description of the tool's API.
-	GetInterfaceDescription() string
 	// OnBootComplete is called after ALL tools and plugins have booted.
 	OnBootComplete(c *Container) error
 	// Shutdown is called during system shutdown for resource cleanup.
 	Shutdown() error
+}
+
+// Describable is an optional interface for tools that self-document their public API.
+// Implement GetInterfaceDescription() to appear in AI_CONTEXT.md.
+// Detected via type assertion in ContextTool — no registration needed.
+type Describable interface {
+	GetInterfaceDescription() string
 }
 
 // Logger is the interface for structured logging within the core and plugins.
@@ -51,4 +56,3 @@ type BaseToolDefaults struct{}
 
 func (BaseToolDefaults) OnBootComplete(_ *Container) error { return nil }
 func (BaseToolDefaults) Shutdown() error                   { return nil }
-func (BaseToolDefaults) GetInterfaceDescription() string   { return "" }

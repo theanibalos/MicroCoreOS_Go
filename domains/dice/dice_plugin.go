@@ -42,7 +42,7 @@ func (p *DicePlugin) OnBoot() error {
 }
 
 // Execute handles GET /dice?sides=6 → {"success": true, "data": {"roll": 4, "sides": 6}}
-func (p *DicePlugin) Execute(ctx *httptool.HttpContext) any {
+func (p *DicePlugin) Execute(ctx *httptool.HttpContext) (any, error) {
 	sides := 6
 
 	rawSides := ctx.Request.URL.Query().Get("sides")
@@ -64,5 +64,5 @@ func (p *DicePlugin) Execute(ctx *httptool.HttpContext) any {
 			Roll:  roll,
 			Sides: sides,
 		},
-	}
+	}, nil
 }

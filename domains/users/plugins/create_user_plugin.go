@@ -6,8 +6,8 @@ import (
 
 	"microcoreos-go/core"
 	"microcoreos-go/tools/authtool"
-	"microcoreos-go/tools/dbtool"
 	"microcoreos-go/tools/httptool"
+	"microcoreos-go/tools/postgresdbtool"
 )
 
 // CreateUserRequest is the expected JSON payload for POST /users
@@ -28,7 +28,7 @@ type CreateUserResponse struct {
 type CreateUserPlugin struct {
 	core.BasePluginDefaults
 	http httptool.HttpTool
-	db   dbtool.DbTool
+	db   postgresdbtool.PostgresTool
 	auth authtool.AuthTool
 }
 
@@ -43,7 +43,7 @@ func (p *CreateUserPlugin) Inject(c *core.Container) error {
 	if p.http, err = core.GetTool[httptool.HttpTool](c, "http"); err != nil {
 		return err
 	}
-	if p.db, err = core.GetTool[dbtool.DbTool](c, "db"); err != nil {
+	if p.db, err = core.GetTool[postgresdbtool.PostgresTool](c, "db"); err != nil {
 		return err
 	}
 	p.auth, err = core.GetTool[authtool.AuthTool](c, "auth")
@@ -55,29 +55,28 @@ func (p *CreateUserPlugin) OnBoot() error {
 	return nil
 }
 
-func (p *CreateUserPlugin) execute(ctx *httptool.HttpContext) any {
+func (p *CreateUserPlugin) execute(ctx *httptool.HttpContext) (any, error) {
 	var req CreateUserRequest
 	if err := json.NewDecoder(ctx.Request.Body).Decode(&req); err != nil {
 		ctx.SetStatus(400)
-		return CreateUserResponse{Success: false, Error: "Invalid JSON body"}
+		return CreateUserResponse{Success: false, Error: "Invalid JSON body"}, nil
 	}
 
 	if req.Username == "" || req.Email == "" || req.Password == "" {
 		ctx.SetStatus(400)
-		return CreateUserResponse{Success: false, Error: "Missing required fields"}
+		return CreateUserResponse{Success: false, Error: "Missing required fields"}, nil
 	}
 
 	hash, err := p.auth.HashPassword(req.Password)
 	if err != nil {
-		ctx.SetStatus(500)
-		return CreateUserResponse{Success: false, Error: "Internal server error hashing password"}
+		return nil, err
 	}
 
-	id, err := p.db.Exec("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)", req.Username, req.Email, hash)
+	id, err := p.db.Insert("INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id", req.Username, req.Email, hash)
 	if err != nil {
 		ctx.SetStatus(409)
-		return CreateUserResponse{Success: false, Error: "Username or email already exists"}
+		return CreateUserResponse{Success: false, Error: "Username or email already exists"}, nil
 	}
 
-	return CreateUserResponse{Success: true, Message: fmt.Sprintf("User created successfully with ID %d", id)}
+	return CreateUserResponse{Success: true, Message: fmt.Sprintf("User created successfully with ID %d", id)}, nil
 }

@@ -2,10 +2,8 @@ package core
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -80,53 +78,10 @@ func (l *defaultLogger) log(level, msg string, args ...any) {
 	fmt.Printf("[%s] %s  %s\n", level, msg, strings.Join(pairs, " "))
 }
 
-// checkStaleImports compares the number of core.Register* calls found in source
-// against the factories actually registered via init(). A mismatch means
-// someone added a tool/plugin but forgot to run `bash gen-imports.sh`.
-func checkStaleImports(registeredTools, registeredPlugins int) {
-	expectedTools := countSourceRegistrations("core.RegisterTool(")
-	expectedPlugins := countSourceRegistrations("core.RegisterPlugin(")
-	if expectedTools == registeredTools && expectedPlugins == registeredPlugins {
-		return
-	}
-	fmt.Println("[Kernel] ⚠️  ─────────────────────────────────────────────────")
-	fmt.Printf("[Kernel] ⚠️  STALE IMPORTS DETECTED\n")
-	fmt.Printf("[Kernel] ⚠️  Source declares: %d tools, %d plugins\n", expectedTools, expectedPlugins)
-	fmt.Printf("[Kernel] ⚠️  Actually booted: %d tools, %d plugins\n", registeredTools, registeredPlugins)
-	fmt.Println("[Kernel] ⚠️  → Run: bash gen-imports.sh && go build .")
-	fmt.Println("[Kernel] ⚠️  ─────────────────────────────────────────────────")
-}
-
-// countSourceRegistrations walks tools/ and domains/ counting occurrences of pattern.
-func countSourceRegistrations(pattern string) int {
-	count := 0
-	for _, root := range []string{"tools", "domains"} {
-		if _, err := os.Stat(root); os.IsNotExist(err) {
-			continue
-		}
-		filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error { //nolint:errcheck
-			if err != nil || d.IsDir() {
-				return nil
-			}
-			if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-				return nil
-			}
-			content, err := os.ReadFile(path)
-			if err != nil {
-				return nil
-			}
-			count += strings.Count(string(content), pattern)
-			return nil
-		})
-	}
-	return count
-}
-
 // Boot starts the system: tools first (parallel), then plugins (parallel),
 // then post-boot hooks for tools.
 func (k *Kernel) Boot() error {
 	k.logger.Info("--- [Kernel] Starting System ---")
-	checkStaleImports(len(registeredToolFactories), len(registeredPluginFactories))
 
 	// ── Phase 1: Boot Tools (parallel) ──────────────────────────────────────
 	var toolWg sync.WaitGroup

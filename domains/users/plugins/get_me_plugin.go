@@ -4,8 +4,8 @@ import (
 	"microcoreos-go/core"
 	"microcoreos-go/domains/users/models"
 	"microcoreos-go/tools/authtool"
-	"microcoreos-go/tools/dbtool"
 	"microcoreos-go/tools/httptool"
+	"microcoreos-go/tools/postgresdbtool"
 )
 
 // GetMeResponse handles errors
@@ -18,7 +18,7 @@ type GetMeResponse struct {
 type GetMePlugin struct {
 	core.BasePluginDefaults
 	http httptool.HttpTool
-	db   dbtool.DbTool
+	db   postgresdbtool.PostgresTool
 	auth authtool.AuthTool
 }
 
@@ -33,7 +33,7 @@ func (p *GetMePlugin) Inject(c *core.Container) error {
 	if p.http, err = core.GetTool[httptool.HttpTool](c, "http"); err != nil {
 		return err
 	}
-	if p.db, err = core.GetTool[dbtool.DbTool](c, "db"); err != nil {
+	if p.db, err = core.GetTool[postgresdbtool.PostgresTool](c, "db"); err != nil {
 		return err
 	}
 	p.auth, err = core.GetTool[authtool.AuthTool](c, "auth")
@@ -45,11 +45,11 @@ func (p *GetMePlugin) OnBoot() error {
 	return nil
 }
 
-func (p *GetMePlugin) execute(ctx *httptool.HttpContext) any {
+func (p *GetMePlugin) execute(ctx *httptool.HttpContext) (any, error) {
 	claims, ok := ctx.Request.Context().Value(httptool.AuthClaimsKey{}).(map[string]any)
 	if !ok {
 		ctx.SetStatus(500)
-		return GetMeResponse{Success: false, Error: "Failed to read auth claims"}
+		return GetMeResponse{Success: false, Error: "Failed to read auth claims"}, nil
 	}
 
 	// JWT encodes numbers as float64.
@@ -61,19 +61,18 @@ func (p *GetMePlugin) execute(ctx *httptool.HttpContext) any {
 		userID = v
 	default:
 		ctx.SetStatus(500)
-		return GetMeResponse{Success: false, Error: "Invalid user ID format in claims"}
+		return GetMeResponse{Success: false, Error: "Invalid user ID format in claims"}, nil
 	}
 
-	row, err := p.db.QueryOne("SELECT id, username, email, created_at FROM users WHERE id = ?", userID)
+	row, err := p.db.QueryOne("SELECT id, username, email, created_at FROM users WHERE id = $1", userID)
 	if err != nil || row == nil {
 		ctx.SetStatus(404)
-		return GetMeResponse{Success: false, Error: "User not found"}
+		return GetMeResponse{Success: false, Error: "User not found"}, nil
 	}
 
-	user, err := dbtool.ScanOne[models.User](row)
+	user, err := postgresdbtool.ScanOne[models.User](row)
 	if err != nil {
-		ctx.SetStatus(500)
-		return GetMeResponse{Success: false, Error: "Failed to read user data"}
+		return nil, err
 	}
-	return user
+	return user, nil
 }

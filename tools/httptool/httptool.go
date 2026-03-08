@@ -12,11 +12,12 @@ ENDPOINTS:
 
 HANDLER SIGNATURE:
 
-	func (p *MyPlugin) handle(ctx *httptool.HttpContext) any {
+	func (p *MyPlugin) handle(ctx *httptool.HttpContext) (any, error) {
 	    id  := ctx.Request.PathValue("id")           // {id} from path
 	    q   := ctx.Request.URL.Query().Get("search") // query string
 	    ctx.SetStatus(201)                           // override status (default 200)
-	    return MyResponse{ID: id}                    // auto JSON-serialized
+	    return MyResponse{ID: id}, nil               // auto JSON-serialized
+	    // return nil, err                           // triggers automatic 500
 	}
 
 AUTH CLAIMS (protected endpoints only):
@@ -71,9 +72,10 @@ import (
 // ─── Handler types ──────────────────────────────────────────────────────────
 
 // HandlerFunc is the signature for REST HTTP endpoint handlers.
-// The handler receives the HttpContext (which contains the raw http.Request)
-// and returns any typed Struct, which will be serialized as JSON.
-type HandlerFunc func(ctx *HttpContext) any
+// Returns (response, nil) on success — response is auto-serialized to JSON.
+// Returns (nil, err) to signal an unexpected error — httptool replies with 500 automatically.
+// Use ctx.SetStatus() for intentional non-200 codes (400, 401, 409, etc.).
+type HandlerFunc func(ctx *HttpContext) (any, error)
 
 // WsHandlerFunc is the signature for bidirectional WebSocket connections.
 // The plugin is entirely responsible for the Read/Write loop on the conn.
@@ -266,18 +268,19 @@ All methods are called in OnBoot(). The server starts after all plugins have boo
   AddEndpoint(path, method, HandlerFunc, authValidator)
     path:          "/users/{id}" — {name} captures path params (Go 1.22 stdlib).
     method:        "GET", "POST", "PUT", "DELETE", etc.
-    HandlerFunc:   func(ctx *httptool.HttpContext) any
-                   Return any Go struct → auto-serialized to JSON.
+    HandlerFunc:   func(ctx *httptool.HttpContext) (any, error)
+                   Return (struct, nil) → auto-serialized to JSON.
+                   Return (nil, err)   → automatic 500 {"success":false,"error":"..."}.
     authValidator: nil = public. Pass auth.ValidateToken to protect the endpoint.
                    On failure the tool returns 401 automatically.
 
   Handler example:
-    func (p *MyPlugin) handle(ctx *httptool.HttpContext) any {
+    func (p *MyPlugin) handle(ctx *httptool.HttpContext) (any, error) {
         id := ctx.Request.PathValue("id")        // path param from {id}
         q  := ctx.Request.URL.Query().Get("q")   // query string
         ctx.SetStatus(201)                        // override default 200
         ctx.SetHeader("X-Custom", "value")
-        return MyResponse{ID: id}
+        return MyResponse{ID: id}, nil
     }
 
 ── AUTH CLAIMS (protected endpoints) ──────────────────────────────────────────
@@ -460,7 +463,12 @@ func (h *HttpServerTool) registerEndpoint(ep pendingEndpoint) {
 					result = map[string]any{"success": false, "error": "Internal server error"}
 				}
 			}()
-			result = handler(ctx)
+			var handlerErr error
+			result, handlerErr = handler(ctx)
+			if handlerErr != nil {
+				ctx.SetStatus(500)
+				result = map[string]any{"success": false, "error": handlerErr.Error()}
+			}
 		}()
 
 		// ── 4. Send response ────────────────────────────────────────────

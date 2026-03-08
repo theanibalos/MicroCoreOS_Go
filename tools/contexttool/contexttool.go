@@ -101,7 +101,10 @@ func (c *ContextTool) OnBootComplete(container *core.Container) error {
 			continue
 		}
 
-		desc := strings.TrimSpace(tool.GetInterfaceDescription())
+		var desc string
+		if d, ok := tool.(core.Describable); ok {
+			desc = strings.TrimSpace(d.GetInterfaceDescription())
+		}
 		if desc == "" {
 			desc = "(no interface description provided)"
 		}

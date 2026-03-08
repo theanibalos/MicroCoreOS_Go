@@ -37,9 +37,9 @@ func TestMiddlewareChain(t *testing.T) {
 	h.AddMiddleware(m2)
 
 	// Add a dummy endpoint to trigger the chain
-	h.AddEndpoint("/test", "GET", func(ctx *HttpContext) any {
+	h.AddEndpoint("/test", "GET", func(ctx *HttpContext) (any, error) {
 		sequence = append(sequence, "handler")
-		return nil
+		return nil, nil
 	}, nil)
 
 	// Simulate boot complete to build the chain
@@ -80,9 +80,9 @@ func TestAuthValidator(t *testing.T) {
 		return nil
 	}
 
-	h.AddEndpoint("/protected", "GET", func(ctx *HttpContext) any {
+	h.AddEndpoint("/protected", "GET", func(ctx *HttpContext) (any, error) {
 		claims, _ := ctx.Request.Context().Value(AuthClaimsKey{}).(map[string]any)
-		return claims
+		return claims, nil
 	}, validator)
 
 	h.registerAllEndpoints()
@@ -112,9 +112,9 @@ func TestAuthValidator(t *testing.T) {
 func TestPathParams(t *testing.T) {
 	h := NewHttpServerTool()
 
-	h.AddEndpoint("/users/{id}", "GET", func(ctx *HttpContext) any {
+	h.AddEndpoint("/users/{id}", "GET", func(ctx *HttpContext) (any, error) {
 		id := ctx.Request.PathValue("id")
-		return map[string]string{"captured_id": id}
+		return map[string]string{"captured_id": id}, nil
 	}, nil)
 
 	h.registerAllEndpoints()
@@ -137,11 +137,11 @@ func TestPathParams(t *testing.T) {
 func TestHttpContext(t *testing.T) {
 	h := NewHttpServerTool()
 
-	h.AddEndpoint("/ctx", "GET", func(ctx *HttpContext) any {
+	h.AddEndpoint("/ctx", "GET", func(ctx *HttpContext) (any, error) {
 		ctx.SetStatus(201)
 		ctx.SetHeader("X-Test", "works")
 		ctx.SetCookie(&http.Cookie{Name: "test-cookie", Value: "sweet"})
-		return nil
+		return nil, nil
 	}, nil)
 
 	h.registerAllEndpoints()
@@ -172,7 +172,7 @@ func TestHttpContext(t *testing.T) {
 }
 func TestCORS(t *testing.T) {
 	h := NewHttpServerTool()
-	h.AddEndpoint("/cors", "GET", func(ctx *HttpContext) any { return "ok" }, nil)
+	h.AddEndpoint("/cors", "GET", func(ctx *HttpContext) (any, error) { return "ok", nil }, nil)
 	h.registerAllEndpoints()
 
 	handler := h.corsMiddleware(h.mux)
@@ -201,7 +201,7 @@ func TestCORS(t *testing.T) {
 
 func TestPanicRecovery(t *testing.T) {
 	h := NewHttpServerTool()
-	h.AddEndpoint("/panic", "GET", func(ctx *HttpContext) any {
+	h.AddEndpoint("/panic", "GET", func(ctx *HttpContext) (any, error) {
 		panic("intentional boom")
 	}, nil)
 	h.registerAllEndpoints()
@@ -224,14 +224,14 @@ func TestRouteOrdering(t *testing.T) {
 	var winner string
 
 	// Register parameterized first to test ordering logic
-	h.AddEndpoint("/{name}", "GET", func(ctx *HttpContext) any {
+	h.AddEndpoint("/{name}", "GET", func(ctx *HttpContext) (any, error) {
 		winner = "parameterized"
-		return nil
+		return nil, nil
 	}, nil)
 
-	h.AddEndpoint("/static", "GET", func(ctx *HttpContext) any {
+	h.AddEndpoint("/static", "GET", func(ctx *HttpContext) (any, error) {
 		winner = "static"
-		return nil
+		return nil, nil
 	}, nil)
 
 	h.registerAllEndpoints()
@@ -247,7 +247,7 @@ func TestRouteOrdering(t *testing.T) {
 
 func TestAuthCookie(t *testing.T) {
 	h := NewHttpServerTool()
-	h.AddEndpoint("/cookie-auth", "GET", func(ctx *HttpContext) any { return "ok" }, func(token string) map[string]any {
+	h.AddEndpoint("/cookie-auth", "GET", func(ctx *HttpContext) (any, error) { return "ok", nil }, func(token string) map[string]any {
 		if token == "secret-cookie" {
 			return map[string]any{"sub": 1.0}
 		}
@@ -267,12 +267,12 @@ func TestAuthCookie(t *testing.T) {
 
 func TestBodyLimit(t *testing.T) {
 	h := NewHttpServerTool()
-	h.AddEndpoint("/limit", "POST", func(ctx *HttpContext) any {
+	h.AddEndpoint("/limit", "POST", func(ctx *HttpContext) (any, error) {
 		body, err := io.ReadAll(ctx.Request.Body)
 		if err != nil {
-			return err.Error()
+			return err.Error(), nil
 		}
-		return len(body)
+		return len(body), nil
 	}, nil)
 	h.registerAllEndpoints()
 

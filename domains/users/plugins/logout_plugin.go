@@ -42,7 +42,7 @@ func (p *LogoutPlugin) OnBoot() error {
 	return nil
 }
 
-func (p *LogoutPlugin) execute(ctx *httptool.HttpContext) any {
+func (p *LogoutPlugin) execute(ctx *httptool.HttpContext) (any, error) {
 	ctx.SetCookie(&http.Cookie{
 		Name:     "session_token",
 		Value:    "",
@@ -51,5 +51,5 @@ func (p *LogoutPlugin) execute(ctx *httptool.HttpContext) any {
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
 	})
-	return LogoutResponse{Success: true, Message: "Logged out successfully"}
+	return LogoutResponse{Success: true, Message: "Logged out successfully"}, nil
 }

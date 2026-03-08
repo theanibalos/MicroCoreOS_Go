@@ -98,8 +98,8 @@ func (p *%s) Inject(c *core.Container) error {
 func (p *%s) OnBoot() error {
 	fmt.Println("[%s] Booting...")
 	
-	p.http.AddEndpoint("/%s/%s", "GET", func(ctx *httptool.HttpContext) any {
-		return map[string]any{"message": "Hello from %s"}
+	p.http.AddEndpoint("/%s/%s", "GET", func(ctx *httptool.HttpContext) (any, error) {
+		return map[string]any{"message": "Hello from %s"}, nil
 	}, nil)
 
 	return nil

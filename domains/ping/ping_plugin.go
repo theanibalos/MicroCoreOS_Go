@@ -38,7 +38,7 @@ func (p *PingPlugin) OnBoot() error {
 }
 
 // Execute handles GET /ping → {"success": true, "data": {"message": "pong 🏓"}}
-func (p *PingPlugin) Execute(ctx *httptool.HttpContext) any {
+func (p *PingPlugin) Execute(ctx *httptool.HttpContext) (any, error) {
 	return PingResponse{
 		Success: true,
 		Data: struct {
@@ -46,5 +46,5 @@ func (p *PingPlugin) Execute(ctx *httptool.HttpContext) any {
 		}{
 			Message: "pong 🏓",
 		},
-	}
+	}, nil
 }
